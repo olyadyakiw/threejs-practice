@@ -6,6 +6,9 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 // Loader
 const gltfLoader = new GLTFLoader()
 
+import firefliesVertexShader from './fireflies/vertex.glsl'
+import firefliesFragmentShader from './fireflies/fragment.glsl'
+
 
 // Canvas
 const canvas = document.querySelector('canvas.webgl')
@@ -21,12 +24,57 @@ gltfLoader.load(
     '/model.glb',
     (gltf) =>
     {
-      console.log(gltf)
-        gltf.scene.scale.set(0.025, 0.025, 0.025)
         scene.add(gltf.scene.children[0])
-
     }
 )
+
+// Floor
+const floor = new THREE.Mesh(
+    new THREE.BoxGeometry(2.5, 0.1, 2.5),
+    new THREE.MeshNormalMaterial
+)
+
+floor.position.y += - 0.05
+scene.add(floor)
+
+/**
+ * Fireflies
+ */
+// Geometry
+const firefliesGeometry = new THREE.BufferGeometry()
+const firefliesCount = 100
+const positionArray = new Float32Array(firefliesCount * 3)
+const scaleArray = new Float32Array(firefliesCount)
+
+for (let i = 0; i < firefliesCount; i++) {
+    positionArray[i * 3 + 0] = (Math.random() - 0.5) * 4
+    positionArray[i * 3 + 1] = (Math.random() * 1.5)
+    positionArray[i * 3 + 2] = (Math.random() - 0.5) * 4
+
+    scaleArray[i] = Math.random()
+}
+
+firefliesGeometry.setAttribute('position', new THREE.BufferAttribute(positionArray, 3))
+firefliesGeometry.setAttribute('aScale', new THREE.BufferAttribute(positionArray, 1))
+
+// Material
+const firefliesMaterial = new THREE.ShaderMaterial({
+    uniforms: {
+        uTime: { value: 0 },
+        uPixelRatio: { value: Math.min(window.devicePixelRatio, 2) },
+        uSize: { value: 100 },
+    },
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    transparent: true,
+    vertexShader: firefliesVertexShader,
+    fragmentShader: firefliesFragmentShader,
+})
+
+
+// Points 
+const fireflies = new THREE.Points(firefliesGeometry, firefliesMaterial)
+scene.add(fireflies)
 
 /**
  * Lights
@@ -42,7 +90,7 @@ directionalLight.shadow.camera.left = - 7
 directionalLight.shadow.camera.top = 7
 directionalLight.shadow.camera.right = 7
 directionalLight.shadow.camera.bottom = - 7
-directionalLight.position.set(- 5, 5, 0)
+directionalLight.position.set(0, 0, 0)
 scene.add(directionalLight)
 
 // Sizes
@@ -92,6 +140,9 @@ const tick = () =>
 
     // Update controls
     controls.update()
+
+    // Update materials
+    firefliesMaterial.uniforms.uTime.value = elapsedTime    
 
     // Render
     renderer.render(scene, camera)
